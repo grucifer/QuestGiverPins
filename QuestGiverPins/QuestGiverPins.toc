@@ -4,6 +4,7 @@
 ## Author: Adam Gruchevsky
 ## Version: 1.0.202611041812
 ## Category: Quests
+## IconTexture: Interface\GossipFrame\AvailableQuestIcon
 ## SavedVariables: QuestGiverPinsDB
 ## X-License: GPL-3.0 (quest data derived from Questie / QuestieDB)
 
