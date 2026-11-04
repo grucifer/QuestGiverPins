@@ -1,0 +1,72 @@
+name: Update quest data
+
+on:
+  schedule:
+    - cron: "17 9 * * *"   # daily, 09:17 UTC (4:17am Eastern)
+  workflow_dispatch:
+    inputs:
+      force_release:
+        description: "Publish a release even if the data did not change"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch latest Questie and QuestieDB
+        run: |
+          git clone --depth 1 https://github.com/Questie/QuestieDB vendor/QuestieDB
+          git clone --depth 1 https://github.com/Questie/Questie vendor/Questie
+          echo "QDB_SHA=$(git -C vendor/QuestieDB rev-parse --short HEAD)" >> "$GITHUB_ENV"
+          echo "QST_SHA=$(git -C vendor/Questie rev-parse --short HEAD)" >> "$GITHUB_ENV"
+
+      - name: Rebuild Data.lua
+        run: python3 tools/extract.py
+
+      - name: Test addon
+        run: |
+          pip install lupa
+          python3 tools/test_addon.py | tee test.log
+          grep -q "ALL PASS" test.log
+
+      - name: Check for changes
+        id: diff
+        run: |
+          if git diff --quiet -- QuestGiverPins/Data.lua; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --stat -- QuestGiverPins/Data.lua
+          fi
+
+      - name: Commit, tag and release
+        if: steps.diff.outputs.changed == 'true' || inputs.force_release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="1.0.$(date -u +%Y%m%d%H%M)"
+          sed -i "s/^## Version: .*/## Version: ${VERSION}/" QuestGiverPins/QuestGiverPins.toc
+          git config user.name "github-actions[bot]"
+          git config user.email "41898+github-actions[bot]@users.noreply.github.com"
+          git add QuestGiverPins/Data.lua QuestGiverPins/QuestGiverPins.toc
+          git commit -m "Update quest data (QuestieDB ${QDB_SHA}, Questie ${QST_SHA})"
+          git tag "v${VERSION}"
+          git push origin HEAD --tags
+          zip -qr "QuestGiverPins-${VERSION}.zip" QuestGiverPins
+          gh release create "v${VERSION}" "QuestGiverPins-${VERSION}.zip" \
+            --title "v${VERSION}" \
+            --notes "Quest data rebuilt from QuestieDB ${QDB_SHA} and Questie ${QST_SHA}."
