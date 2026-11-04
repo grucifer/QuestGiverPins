@@ -4,12 +4,42 @@
     powershell -ExecutionPolicy Bypass -File Update-QuestGiverPins.ps1 -Register
 #>
 param(
-    [string]$AddOnsPath = "C:\Program Files (x86)\World of Warcraft\_forever_\Interface\AddOns",
+    [string]$AddOnsPath = "",
     [string]$Repo = "grucifer/QuestGiverPins",
     [switch]$Register
 )
 
 $ErrorActionPreference = "Stop"
+
+function Find-ForeverAddOns {
+    $roots = @()
+    # Battle.net records the WoW install folder in the registry
+    foreach ($key in "HKLM:\SOFTWARE\WOW6432Node\Blizzard Entertainment\World of Warcraft",
+                     "HKLM:\SOFTWARE\Blizzard Entertainment\World of Warcraft") {
+        $ip = (Get-ItemProperty $key -ErrorAction SilentlyContinue).InstallPath
+        if ($ip) { $roots += (Split-Path ($ip.TrimEnd("\")) -Parent); $roots += $ip }
+    }
+    foreach ($drive in "D:", "C:", "E:") {
+        $roots += "$drive\World of Warcraft", "$drive\Games\World of Warcraft",
+                  "$drive\Program Files (x86)\World of Warcraft", "$drive\Program Files\World of Warcraft",
+                  "$drive\Battle.net\World of Warcraft", "$drive\Blizzard\World of Warcraft"
+    }
+    foreach ($r in $roots) {
+        $forever = Join-Path $r "_forever_"
+        if (Test-Path $forever) {
+            $addons = Join-Path $forever "Interface\AddOns"
+            New-Item -ItemType Directory $addons -Force | Out-Null
+            return $addons
+        }
+    }
+    return $null
+}
+
+if (-not $AddOnsPath) {
+    $AddOnsPath = Find-ForeverAddOns
+    if (-not $AddOnsPath) { throw "Couldn't find WoW Forever (_forever_ folder). Re-run with -AddOnsPath ""<WoW folder>\_forever_\Interface\AddOns""" }
+    Write-Host "Found WoW Forever AddOns folder: $AddOnsPath"
+}
 
 if ($Register) {
     $script = $MyInvocation.MyCommand.Path
