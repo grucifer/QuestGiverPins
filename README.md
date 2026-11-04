@@ -19,8 +19,7 @@ It finds your `_forever_` folder (Battle.net registry entry, then common folders
 `QuestGiverPins/Data.lua` is generated from [QuestieDB](https://github.com/Questie/QuestieDB) (Forever base data plus all Forever corrections) and [Questie](https://github.com/Questie/Questie)'s quest blacklist. The extractor parses their Lua data as text and doesn't execute anything from those repos.
 
 ```sh
-git clone --depth 1 https://github.com/Questie/QuestieDB vendor/QuestieDB
-git clone --depth 1 https://github.com/Questie/Questie   vendor/Questie
+tools/fetch-sources.sh vendor     # sparse download of only the needed files (~14 MB)
 python3 tools/extract.py          # writes QuestGiverPins/Data.lua
 pip install lupa && python3 tools/test_addon.py   # offline tests with stubbed WoW APIs
 ```

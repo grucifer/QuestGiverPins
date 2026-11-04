@@ -27,10 +27,9 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Fetch latest Questie and QuestieDB
+      - name: Fetch quest data files from Questie and QuestieDB
         run: |
-          git clone --depth 1 https://github.com/Questie/QuestieDB vendor/QuestieDB
-          git clone --depth 1 https://github.com/Questie/Questie vendor/Questie
+          tools/fetch-sources.sh vendor
           echo "QDB_SHA=$(git -C vendor/QuestieDB rev-parse --short HEAD)" >> "$GITHUB_ENV"
           echo "QST_SHA=$(git -C vendor/Questie rev-parse --short HEAD)" >> "$GITHUB_ENV"
 
