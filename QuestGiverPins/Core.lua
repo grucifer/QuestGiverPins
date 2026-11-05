@@ -38,6 +38,9 @@ end
 -- Player state
 ---------------------------------------------------------------------------
 local completed, inLog, skills, repCache = {}, {}, {}, {}
+-- quests turned in this session: the server's completed list can lag behind QUEST_TURNED_IN,
+-- so these are kept and merged back in every time that list is re-read
+local turnedIn = {}
 local player = { level = 1, raceBit = 0, classBit = 0, faction = "A" }
 
 local function RefreshCompleted()
@@ -51,6 +54,7 @@ local function RefreshCompleted()
     elseif GetQuestsCompleted then
         GetQuestsCompleted(completed)
     end
+    for id in pairs(turnedIn) do completed[id] = true end
 end
 
 local function RefreshQuestLog()
@@ -347,7 +351,10 @@ f:SetScript("OnEvent", function(_, event, arg1)
     elseif not ns.ready then
         return
     elseif event == "QUEST_TURNED_IN" then
-        if arg1 then completed[arg1] = true end
+        if arg1 then
+            turnedIn[arg1] = true
+            completed[arg1] = true
+        end
         inLog[arg1 or 0] = nil
         ScheduleRefresh(true)
     elseif event == "SKILL_LINES_CHANGED" then
