@@ -41,7 +41,17 @@ function WorldMapFrame:AddDataProvider(p) p.GetMap = function() return WorldMapF
 function WorldMapFrame:IsShown() return self.shown end
 function WorldMapFrame:GetMapID() return self.mapID end
 function WorldMapFrame:RemoveAllPinsByTemplate() wipe(self.pins) end
-function WorldMapFrame:AcquirePin(_, info) self.pins[#self.pins+1] = info end
+function WorldMapFrame:AcquirePin(_, info)
+  local pin = { info = info, level = 2000 }
+  for k, v in pairs(info) do pin[k] = v end
+  function pin:GetFrameLevel() return self.level end
+  function pin:SetFrameLevel(l) self.level = l end
+  function pin:SetFixedFrameLevel(f) self.fixed = f end
+  self.pins[#self.pins+1] = pin
+  return pin
+end
+function InCombatLockdown() return false end
+Enum = { UIMapType = { Cosmic = 0, World = 1, Continent = 2, Zone = 3 } }
 SlashCmdList = {}
 function UnitLevel() return STATE.level end
 function UnitRace() return "x", "x", STATE.race end
@@ -67,7 +77,7 @@ C_Map = {
   GetBestMapForUnit = function() return STATE.map end,
   GetPlayerMapPosition = function() return CreateVector2D(STATE.px, STATE.py) end,
   GetWorldPosFromMapPos = function(m, v) if m ~= STATE.map then return 99, CreateVector2D(0,0) end return 1, CreateVector2D(1000 - v.y*1000, 1000 - v.x*1000) end,
-  GetMapInfo = function() return { mapType = 3 } end,
+  GetMapInfo = function(m) return { mapType = (m == 1415 or m == 1414) and 2 or 3 } end,
 }
 -- ---- load addon ----
 for _, f in ipairs(files) do
@@ -174,6 +184,40 @@ res = L.execute("""for _, f in ipairs(FRAMES) do if f.scripts.OnUpdate then f.sc
   if best then return best.x, best.y end""")
 print("  rotating minimap, facing west, giver north:", res)
 check(res and abs(res[0] - 15) < 2 and abs(res[1]) < 2, "facing west: north is to the RIGHT")
+
+# 6b. OpenMap stitched map: neighbours included, pins lifted above the art
+L, ns = setup(1, 1, 10, "Alliance")
+L.execute("""
+  -- fake stitched world: each zone is a 0.1-wide box; Elwynn (1429) at u 0.5, Westfall (1436) left of it
+  local boxes = { [1429] = {0.50, 0.70}, [1436] = {0.40, 0.70}, [1433] = {0.60, 0.70}, [1411] = {0.10, 0.30} }
+  OpenMapAPI = {
+    IsStitched = function() return true end,
+    ArtTopLevel = function() return 5000 end,
+    GetView = function() return 0.55, 0.75, 4 end,
+    WorldFromMap = function(m, x, y) local b = boxes[m] if b then return b[1] + x * 0.1, b[2] + y * 0.1 end end,
+    MapFromWorld = function(m, u, v) local b = boxes[m] or {0, 0} local w = (m == 1415) and 1 or 0.1 return (u - b[1]) / w, (v - b[2]) / w end,
+    RegisterCallback = function() end,
+    RegisterMenuToggle = function(owner, spec) MENU = spec end,
+  }
+  boxes[1415] = {0, 0}
+""")
+L.execute("ns.openMapHooked = nil")
+L.execute("for _, f in ipairs(FRAMES) do if f.scripts.OnEvent then f.scripts.OnEvent(f, 'PLAYER_LOGIN') end end")
+res = L.execute("""WorldMapFrame.mapID = 1429 WorldMapFrame.shown = true WorldMapFrame.providers[1]:RefreshAllData()
+  local zones, lifted, n = {}, 0, #WorldMapFrame.pins
+  for _, p in ipairs(WorldMapFrame.pins) do zones[p.wpMap] = (zones[p.wpMap] or 0) + 1 if p.level > 5000 and p.fixed then lifted = lifted + 1 end end
+  return n, lifted, zones[1429] or 0, zones[1436] or 0, zones[1411] or 0""")
+print("  stitched on Elwynn: pins, lifted, elwynn, westfall, durotar =", res)
+check(res[0] > 0 and res[1] == res[0], "all pins lifted above OpenMap's art")
+check(res[2] > 0 and res[3] > 0, "Elwynn and neighbouring Westfall pins shown")
+check(res[4] == 0, "far-away / other-faction zone not drawn")
+res2 = L.execute("""WorldMapFrame.mapID = 1415 WorldMapFrame.providers[1]:RefreshAllData()
+  local zones = {} for _, p in ipairs(WorldMapFrame.pins) do zones[p.wpMap] = true end
+  return #WorldMapFrame.pins, zones[1429] and true or false""")
+check(res2[0] > 0 and res2[1], "continent view near Elwynn shows pins (%d)" % res2[0])
+check(L.execute("return MENU and MENU.label") == "Quest giver pins", "toggle added to OpenMap's menu")
+L.execute("MENU.set(false)")
+check(L.execute("WorldMapFrame.providers[1]:RefreshAllData() return #WorldMapFrame.pins") == 0, "OpenMap menu toggle turns pins off")
 
 # 7. slash command
 L.execute("SlashCmdList.QUESTGIVERPINS('minimap')")

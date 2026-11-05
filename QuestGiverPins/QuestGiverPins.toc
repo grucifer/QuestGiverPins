@@ -5,6 +5,7 @@
 ## Version: 1.0.202611051503
 ## Category: Quests
 ## IconTexture: Interface\GossipFrame\AvailableQuestIcon
+## OptionalDeps: OpenMap
 ## SavedVariables: QuestGiverPinsDB
 ## X-License: GPL-3.0 (quest data derived from Questie / QuestieDB)
 
