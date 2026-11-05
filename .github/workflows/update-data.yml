@@ -2,7 +2,8 @@ name: Update quest data
 
 on:
   schedule:
-    - cron: "17 9 * * *"   # daily, 09:17 UTC (4:17am Eastern)
+    - cron: "17 9 * * *"    # daily, 09:17 UTC (4:17am Eastern)
+    - cron: "47 21 * * *"   # backup, 21:47 UTC (4:47pm Eastern); GitHub can skip scheduled runs. No change = no release.
   workflow_dispatch:
     inputs:
       force_release:
