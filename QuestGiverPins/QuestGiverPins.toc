@@ -2,7 +2,7 @@
 ## Title: Quest Giver Pins
 ## Notes: Shows a ! on the world map and minimap for quest givers with quests you can pick up. Type /qgp for options.
 ## Author: Adam Gruchevsky
-## Version: 1.0.202611071540
+## Version: 1.0.202611080054
 ## Category: Quests
 ## IconTexture: Interface\GossipFrame\AvailableQuestIcon
 ## OptionalDeps: OpenMap
