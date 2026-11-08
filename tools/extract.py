@@ -288,6 +288,12 @@ for qid, q in quests.items():
         "rep": 1 if (special & 1) else 0, "day": 1 if (flags & (4096 | 32768)) else 0,
         "ev": 1 if zos in holiday else 0,
     }
+# our own fixes on top of Questie's data (tools/local_corrections.py)
+from local_corrections import QUESTS as LOCAL_QUEST_FIXES
+for qid, fix in LOCAL_QUEST_FIXES.items():
+    if qid in qout:
+        qout[qid].update(fix)
+print("local quest fixes applied:", sorted(q for q in LOCAL_QUEST_FIXES if q in qout))
 # drop pre-quest refs to quests that don't exist so they can't block forever
 for q in qout.values():
     q["pg"] = [x for x in q["pg"] if abs(x) in quests]

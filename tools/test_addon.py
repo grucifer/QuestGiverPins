@@ -161,6 +161,13 @@ fire(L, "QUEST_ACCEPTED", 783)
 after = L.execute("return #WorldMapFrame.pins")
 check("A Threat Within" not in available_on_map(L, 1429) and after <= before, "accepted quest leaves the open map (%d -> %d pins)" % (before, after))
 
+# local correction: Trek to Ashenvale (990) needs A Lost Master (986) turned in first
+L, ns = setup(4, 1, 19, "Alliance")  # night elf
+a = available_on_map(L, 1439)
+check("Trek to Ashenvale" not in a, "Trek to Ashenvale hidden before A Lost Master")
+L, ns = setup(4, 1, 19, "Alliance", completed=[986])
+check("Trek to Ashenvale" in available_on_map(L, 1439), "Trek to Ashenvale shown after A Lost Master")
+
 # 3. quest in log hides it
 L, ns = setup(1, 1, 1, "Alliance", log=[783])
 check("A Threat Within" not in available_on_map(L, 1429), "quest in log is hidden")
