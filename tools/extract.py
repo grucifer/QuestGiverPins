@@ -50,8 +50,17 @@ class KeyNS(LuaTable):
 def mod(**kw):
     return LuaTable(kw)
 
+class EnumModule(LuaTable):
+    """QuestieDB.<name>: explicit entries first, then any enum table Questie defines
+    (Forever's per-expansion tables, then shared ones), so newly added enums just work."""
+    def missing(self, k):
+        for src in (fe, constants, classic):
+            if isinstance(src, dict) and k in src:
+                return src[k]
+        return None
+
 modules = {
-    "QuestieDB": mod(questKeys=KeyNS(), npcKeys=KeyNS(), objectKeys=KeyNS(), itemKeys=KeyNS(),
+    "QuestieDB": EnumModule(questKeys=KeyNS(), npcKeys=KeyNS(), objectKeys=KeyNS(), itemKeys=KeyNS(),
                      raceKeys=fe["raceKeys"], classKeys=classic["classKeys"], npcFlags=fe["npcFlags"],
                      sortKeys=constants["sortKeys"], specialFlags=constants["specialFlags"],
                      questFlags=constants["questFlags"], factionIDs=constants["factionIDs"],
